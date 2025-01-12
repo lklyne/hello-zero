@@ -1,105 +1,105 @@
-import { useState, MouseEvent, useRef } from "react";
-import Cookies from "js-cookie";
-import { useQuery, useZero } from "@rocicorp/zero/react";
-import { escapeLike } from "@rocicorp/zero";
-import { Schema } from "./schema";
-import { randomMessage } from "./test-data";
-import { randInt } from "./rand";
-import { useInterval } from "./use-interval";
-import { formatDate } from "./date";
+import { useState, MouseEvent, useRef } from 'react'
+import Cookies from 'js-cookie'
+import { useQuery, useZero } from '@rocicorp/zero/react'
+import { escapeLike } from '@rocicorp/zero'
+import { Schema } from './schema'
+import { randomMessage } from './test-data'
+import { randInt } from './rand'
+import { useInterval } from './use-interval'
+import { formatDate } from './date'
 
 function App() {
-  const z = useZero<Schema>();
-  const [users] = useQuery(z.query.user);
-  const [mediums] = useQuery(z.query.medium);
+  const z = useZero<Schema>()
+  const [users] = useQuery(z.query.user)
+  const [mediums] = useQuery(z.query.medium)
 
-  const [filterUser, setFilterUser] = useState<string>("");
-  const [filterText, setFilterText] = useState<string>("");
+  const [filterUser, setFilterUser] = useState<string>('')
+  const [filterText, setFilterText] = useState<string>('')
 
-  const all = z.query.message;
-  const [allMessages] = useQuery(all);
+  const all = z.query.message
+  const [allMessages] = useQuery(all)
 
   let filtered = all
-    .related("medium", (medium) => medium.one())
-    .related("sender", (sender) => sender.one())
-    .orderBy("timestamp", "desc");
+    .related('medium', (medium) => medium.one())
+    .related('sender', (sender) => sender.one())
+    .orderBy('timestamp', 'desc')
 
   if (filterUser) {
-    filtered = filtered.where("senderID", filterUser);
+    filtered = filtered.where('senderID', filterUser)
   }
 
   if (filterText) {
-    filtered = filtered.where("body", "LIKE", `%${escapeLike(filterText)}%`);
+    filtered = filtered.where('body', 'LIKE', `%${escapeLike(filterText)}%`)
   }
 
-  const [filteredMessages] = useQuery(filtered);
+  const [filteredMessages] = useQuery(filtered)
 
-  const hasFilters = filterUser || filterText;
-  const [action, setAction] = useState<"add" | "remove" | undefined>(undefined);
-  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasFilters = filterUser || filterText
+  const [action, setAction] = useState<'add' | 'remove' | undefined>(undefined)
+  const holdTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const deleteRandomMessage = () => {
     if (allMessages.length === 0) {
-      return false;
+      return false
     }
-    const index = randInt(allMessages.length);
-    z.mutate.message.delete({ id: allMessages[index].id });
+    const index = randInt(allMessages.length)
+    z.mutate.message.delete({ id: allMessages[index].id })
 
-    return true;
-  };
+    return true
+  }
 
   const addRandomMessage = () => {
-    z.mutate.message.insert(randomMessage(users, mediums));
-    return true;
-  };
+    z.mutate.message.insert(randomMessage(users, mediums))
+    return true
+  }
 
   const handleAction = () => {
-    if (action === "add") {
-      return addRandomMessage();
-    } else if (action === "remove") {
-      return deleteRandomMessage();
+    if (action === 'add') {
+      return addRandomMessage()
+    } else if (action === 'remove') {
+      return deleteRandomMessage()
     }
 
-    return false;
-  };
+    return false
+  }
 
   useInterval(
     () => {
       if (!handleAction()) {
-        setAction(undefined);
+        setAction(undefined)
       }
     },
     action !== undefined ? 1000 / 60 : null
-  );
+  )
 
-  const INITIAL_HOLD_DELAY_MS = 300;
+  const INITIAL_HOLD_DELAY_MS = 300
   const handleAddAction = () => {
-    addRandomMessage();
+    addRandomMessage()
     holdTimerRef.current = setTimeout(() => {
-      setAction("add");
-    }, INITIAL_HOLD_DELAY_MS);
-  };
+      setAction('add')
+    }, INITIAL_HOLD_DELAY_MS)
+  }
 
   const handleRemoveAction = (e: MouseEvent | React.TouchEvent) => {
-    if (z.userID === "anon" && "shiftKey" in e && !e.shiftKey) {
-      alert("You must be logged in to delete. Hold shift to try anyway.");
-      return;
+    if (z.userID === 'anon' && 'shiftKey' in e && !e.shiftKey) {
+      alert('You must be logged in to delete. Hold shift to try anyway.')
+      return
     }
-    deleteRandomMessage();
+    deleteRandomMessage()
 
     holdTimerRef.current = setTimeout(() => {
-      setAction("remove");
-    }, INITIAL_HOLD_DELAY_MS);
-  };
+      setAction('remove')
+    }, INITIAL_HOLD_DELAY_MS)
+  }
 
   const stopAction = () => {
     if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
+      clearTimeout(holdTimerRef.current)
+      holdTimerRef.current = null
     }
 
-    setAction(undefined);
-  };
+    setAction(undefined)
+  }
 
   const editMessage = (
     e: MouseEvent,
@@ -110,31 +110,31 @@ function App() {
     if (senderID !== z.userID && !e.shiftKey) {
       alert(
         "You aren't logged in as the sender of this message. Editing won't be permitted. Hold the shift key to try anyway."
-      );
-      return;
+      )
+      return
     }
-    const body = prompt("Edit message", prev);
+    const body = prompt('Edit message', prev)
     z.mutate.message.update({
       id,
       body: body ?? prev,
-    });
-  };
+    })
+  }
 
   const toggleLogin = async () => {
-    if (z.userID === "anon") {
-      await fetch("/api/login");
+    if (z.userID === 'anon') {
+      await fetch('/api/login')
     } else {
-      Cookies.remove("jwt");
+      Cookies.remove('jwt')
     }
-    location.reload();
-  };
+    location.reload()
+  }
 
   // If initial sync hasn't completed, these can be empty.
   if (!users.length || !mediums.length) {
-    return null;
+    return null
   }
 
-  const user = users.find((user) => user.id === z.userID)?.name ?? "anon";
+  const user = users.find((user) => user.id === z.userID)?.name ?? 'anon'
 
   return (
     <>
@@ -162,12 +162,12 @@ function App() {
         </div>
         <div
           style={{
-            justifyContent: "end",
+            justifyContent: 'end',
           }}
         >
-          {user === "anon" ? "" : `Logged in as ${user}`}
+          {user === 'anon' ? '' : `Logged in as ${user}`}
           <button onMouseDown={() => toggleLogin()}>
-            {user === "anon" ? "Login" : "Logout"}
+            {user === 'anon' ? 'Login' : 'Logout'}
           </button>
         </div>
       </div>
@@ -178,7 +178,7 @@ function App() {
             onChange={(e) => setFilterUser(e.target.value)}
             style={{ flex: 1 }}
           >
-            <option key={""} value="">
+            <option key={''} value="">
               Sender
             </option>
             {users.map((user) => (
@@ -204,11 +204,11 @@ function App() {
             <>Showing all {filteredMessages.length} messages</>
           ) : (
             <>
-              Showing {filteredMessages.length} of {allMessages.length}{" "}
-              messages. Try opening{" "}
+              Showing {filteredMessages.length} of {allMessages.length}{' '}
+              messages. Try opening{' '}
               <a href="/" target="_blank">
                 another tab
-              </a>{" "}
+              </a>{' '}
               to see them all!
             </>
           )}
@@ -223,6 +223,7 @@ function App() {
           <thead>
             <tr>
               <th>Sender</th>
+              <th>Role</th>
               <th>Medium</th>
               <th>Message</th>
               <th>Sent</th>
@@ -233,6 +234,7 @@ function App() {
             {filteredMessages.map((message) => (
               <tr key={message.id}>
                 <td align="left">{message.sender?.name}</td>
+                <td align="left">{message.roll}</td>
                 <td align="left">{message.medium?.name}</td>
                 <td align="left">{message.body}</td>
                 <td align="right">{formatDate(message.timestamp)}</td>
@@ -249,7 +251,7 @@ function App() {
         </table>
       )}
     </>
-  );
+  )
 }
 
-export default App;
+export default App

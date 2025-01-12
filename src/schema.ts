@@ -14,50 +14,51 @@ import {
   Row,
   NOBODY_CAN,
   ANYONE_CAN,
-} from "@rocicorp/zero";
+} from '@rocicorp/zero'
 
 const userSchema = createTableSchema({
-  tableName: "user",
+  tableName: 'user',
   columns: {
-    id: "string",
-    name: "string",
-    partner: "boolean",
+    id: 'string',
+    name: 'string',
+    partner: 'boolean',
   },
-  primaryKey: "id",
-});
+  primaryKey: 'id',
+})
 
 const mediumSchema = createTableSchema({
-  tableName: "medium",
+  tableName: 'medium',
   columns: {
-    id: "string",
-    name: "string",
+    id: 'string',
+    name: 'string',
   },
-  primaryKey: "id",
-});
+  primaryKey: 'id',
+})
 
 const messageSchema = createTableSchema({
-  tableName: "message",
+  tableName: 'message',
   columns: {
-    id: "string",
-    senderID: "string",
-    mediumID: "string",
-    body: "string",
-    timestamp: "number",
+    id: 'string',
+    senderID: 'string',
+    mediumID: 'string',
+    body: 'string',
+    timestamp: 'number',
+    roll: 'string',
   },
-  primaryKey: "id",
+  primaryKey: 'id',
   relationships: {
     sender: {
-      sourceField: "senderID",
+      sourceField: 'senderID',
       destSchema: userSchema,
-      destField: "id",
+      destField: 'id',
     },
     medium: {
-      sourceField: "mediumID",
+      sourceField: 'mediumID',
       destSchema: mediumSchema,
-      destField: "id",
+      destField: 'id',
     },
   },
-});
+})
 
 export const schema = createSchema({
   version: 1,
@@ -66,28 +67,28 @@ export const schema = createSchema({
     medium: mediumSchema,
     message: messageSchema,
   },
-});
+})
 
-export type Schema = typeof schema;
-export type Message = Row<typeof messageSchema>;
-export type Medium = Row<typeof mediumSchema>;
-export type User = Row<typeof schema.tables.user>;
+export type Schema = typeof schema
+export type Message = Row<typeof messageSchema>
+export type Medium = Row<typeof mediumSchema>
+export type User = Row<typeof schema.tables.user>
 
 // The contents of your decoded JWT.
 type AuthData = {
-  sub: string | null;
-};
+  sub: string | null
+}
 
 export const permissions = definePermissions<AuthData, Schema>(schema, () => {
   const allowIfLoggedIn = (
     authData: AuthData,
     { cmpLit }: ExpressionBuilder<TableSchema>
-  ) => cmpLit(authData.sub, "IS NOT", null);
+  ) => cmpLit(authData.sub, 'IS NOT', null)
 
   const allowIfMessageSender = (
     authData: AuthData,
     { cmp }: ExpressionBuilder<typeof messageSchema>
-  ) => cmp("senderID", "=", authData.sub ?? "");
+  ) => cmp('senderID', '=', authData.sub ?? '')
 
   return {
     medium: {
@@ -120,5 +121,5 @@ export const permissions = definePermissions<AuthData, Schema>(schema, () => {
         delete: [allowIfLoggedIn],
       },
     },
-  };
-});
+  }
+})
