@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
+// import App from './App.tsx'
 import Experience from './Experience.tsx'
 import './index.css'
 import { ZeroProvider } from '@rocicorp/zero/react'
