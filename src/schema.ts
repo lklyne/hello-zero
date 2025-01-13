@@ -60,12 +60,36 @@ const messageSchema = createTableSchema({
   },
 })
 
+const chatSchema = createTableSchema({
+  tableName: 'chat',
+  columns: {
+    id: 'string',
+    userID: 'string',
+    messageID: 'string',
+    timestamp: 'number',
+  },
+  primaryKey: 'id',
+  relationships: {
+    user: {
+      sourceField: 'userID',
+      destSchema: userSchema,
+      destField: 'id',
+    },
+    message: {
+      sourceField: 'messageID',
+      destSchema: messageSchema,
+      destField: 'id',
+    },
+  },
+})
+
 export const schema = createSchema({
   version: 1,
   tables: {
     user: userSchema,
     medium: mediumSchema,
     message: messageSchema,
+    chat: chatSchema,
   },
 })
 
@@ -73,6 +97,7 @@ export type Schema = typeof schema
 export type Message = Row<typeof messageSchema>
 export type Medium = Row<typeof mediumSchema>
 export type User = Row<typeof schema.tables.user>
+export type Chat = Row<typeof chatSchema>
 
 // The contents of your decoded JWT.
 type AuthData = {
@@ -118,6 +143,15 @@ export const permissions = definePermissions<AuthData, Schema>(schema, () => {
           preMutation: [allowIfMessageSender],
         },
         // must be logged in to delete
+        delete: [allowIfLoggedIn],
+      },
+    },
+    chat: {
+      row: {
+        insert: ANYONE_CAN,
+        update: {
+          preMutation: NOBODY_CAN,
+        },
         delete: [allowIfLoggedIn],
       },
     },

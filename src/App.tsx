@@ -8,6 +8,24 @@ import { randInt } from './rand'
 import { useInterval } from './use-interval'
 import { formatDate } from './date'
 
+const createRandomChat = (
+  z: ZeroClient<Schema>,
+  messages: Message[],
+  users: User[]
+) => {
+  if (!messages.length || !users.length) return
+
+  const randomMessage = messages[randInt(messages.length)]
+  const randomUser = users[randInt(users.length)]
+
+  z.mutate.chat.insert({
+    id: crypto.randomUUID(),
+    userID: randomUser.id,
+    messageID: randomMessage.id,
+    timestamp: Date.now(),
+  })
+}
+
 function App() {
   const z = useZero<Schema>()
   const [users] = useQuery(z.query.user)
@@ -129,6 +147,22 @@ function App() {
     location.reload()
   }
 
+  const [selectedChat, setSelectedChat] = useState<string | null>(null)
+  const [chats] = useQuery(
+    z.query.chat
+      .related('user', (user) => user.one())
+      .related('message', (message) => message.one())
+      .orderBy('timestamp', 'desc')
+  )
+
+  // If a chat is selected, filter messages to just that chat's message
+  if (selectedChat) {
+    const chat = chats.find((c) => c.id === selectedChat)
+    if (chat) {
+      filtered = filtered.where('id', chat.messageID)
+    }
+  }
+
   // If initial sync hasn't completed, these can be empty.
   if (!users.length || !mediums.length) {
     return null
@@ -137,120 +171,184 @@ function App() {
   const user = users.find((user) => user.id === z.userID)?.name ?? 'anon'
 
   return (
-    <>
-      <div className="controls">
-        <div>
-          <button
-            onMouseDown={handleAddAction}
-            onMouseUp={stopAction}
-            onMouseLeave={stopAction}
-            onTouchStart={handleAddAction}
-            onTouchEnd={stopAction}
-          >
-            Add Messages
-          </button>
-          <button
-            onMouseDown={handleRemoveAction}
-            onMouseUp={stopAction}
-            onMouseLeave={stopAction}
-            onTouchStart={handleRemoveAction}
-            onTouchEnd={stopAction}
-          >
-            Remove Messages
-          </button>
-          <em>(hold down buttons to repeat)</em>
-        </div>
+    <div style={{ display: 'flex', gap: '1rem' }}>
+      <div
+        style={{
+          width: '250px',
+          borderRight: '1px solid #ccc',
+          padding: '1rem',
+        }}
+      >
         <div
           style={{
-            justifyContent: 'end',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1rem',
           }}
         >
-          {user === 'anon' ? '' : `Logged in as ${user}`}
-          <button onMouseDown={() => toggleLogin()}>
-            {user === 'anon' ? 'Login' : 'Logout'}
-          </button>
+          <h3>Chats</h3>
+          <div>
+            <button onClick={() => createRandomChat(z, allMessages, users)}>
+              Add
+            </button>
+            {selectedChat && (
+              <button
+                onClick={() => {
+                  z.mutate.chat.delete({ id: selectedChat })
+                  setSelectedChat(null)
+                }}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+        >
+          {chats.map((chat) => (
+            <div
+              key={chat.id}
+              onClick={() =>
+                setSelectedChat(chat.id === selectedChat ? null : chat.id)
+              }
+              style={{
+                padding: '0.5rem',
+                cursor: 'pointer',
+                backgroundColor:
+                  chat.id === selectedChat ? '#eee' : 'transparent',
+              }}
+            >
+              <div>
+                <strong>{chat.user?.name}</strong>
+              </div>
+              <div style={{ fontSize: '0.9em', color: '#666' }}>
+                {chat.message?.body.slice(0, 30)}...
+              </div>
+              <div style={{ fontSize: '0.8em', color: '#999' }}>
+                {formatDate(chat.timestamp)}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-      <div className="controls">
-        <div>
-          From:
-          <select
-            onChange={(e) => setFilterUser(e.target.value)}
-            style={{ flex: 1 }}
+
+      <div style={{ flex: 1 }}>
+        <div className="controls">
+          <div>
+            <button
+              onMouseDown={handleAddAction}
+              onMouseUp={stopAction}
+              onMouseLeave={stopAction}
+              onTouchStart={handleAddAction}
+              onTouchEnd={stopAction}
+            >
+              Add Messages
+            </button>
+            <button
+              onMouseDown={handleRemoveAction}
+              onMouseUp={stopAction}
+              onMouseLeave={stopAction}
+              onTouchStart={handleRemoveAction}
+              onTouchEnd={stopAction}
+            >
+              Remove Messages
+            </button>
+            <em>(hold down buttons to repeat)</em>
+          </div>
+          <div
+            style={{
+              justifyContent: 'end',
+            }}
           >
-            <option key={''} value="">
-              Sender
-            </option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name}
+            {user === 'anon' ? '' : `Logged in as ${user}`}
+            <button onMouseDown={() => toggleLogin()}>
+              {user === 'anon' ? 'Login' : 'Logout'}
+            </button>
+          </div>
+        </div>
+        <div className="controls">
+          <div>
+            From:
+            <select
+              onChange={(e) => setFilterUser(e.target.value)}
+              style={{ flex: 1 }}
+            >
+              <option key={''} value="">
+                Sender
               </option>
-            ))}
-          </select>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            Contains:
+            <input
+              type="text"
+              placeholder="message"
+              onChange={(e) => setFilterText(e.target.value)}
+              style={{ flex: 1 }}
+            />
+          </div>
         </div>
-        <div>
-          Contains:
-          <input
-            type="text"
-            placeholder="message"
-            onChange={(e) => setFilterText(e.target.value)}
-            style={{ flex: 1 }}
-          />
+        <div className="controls">
+          <em>
+            {!hasFilters ? (
+              <>Showing all {filteredMessages.length} messages</>
+            ) : (
+              <>
+                Showing {filteredMessages.length} of {allMessages.length}{' '}
+                messages. Try opening{' '}
+                <a href="/" target="_blank">
+                  another tab
+                </a>{' '}
+                to see them all!
+              </>
+            )}
+          </em>
         </div>
-      </div>
-      <div className="controls">
-        <em>
-          {!hasFilters ? (
-            <>Showing all {filteredMessages.length} messages</>
-          ) : (
-            <>
-              Showing {filteredMessages.length} of {allMessages.length}{' '}
-              messages. Try opening{' '}
-              <a href="/" target="_blank">
-                another tab
-              </a>{' '}
-              to see them all!
-            </>
-          )}
-        </em>
-      </div>
-      {filteredMessages.length === 0 ? (
-        <h3>
-          <em>No posts found 😢</em>
-        </h3>
-      ) : (
-        <table border={1} cellSpacing={0} cellPadding={6} width="100%">
-          <thead>
-            <tr>
-              <th>Sender</th>
-              <th>Role</th>
-              <th>Medium</th>
-              <th>Message</th>
-              <th>Sent</th>
-              <th>Edit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredMessages.map((message) => (
-              <tr key={message.id}>
-                <td align="left">{message.sender?.name}</td>
-                <td align="left">{message.roll}</td>
-                <td align="left">{message.medium?.name}</td>
-                <td align="left">{message.body}</td>
-                <td align="right">{formatDate(message.timestamp)}</td>
-                <td
-                  onMouseDown={(e) =>
-                    editMessage(e, message.id, message.senderID, message.body)
-                  }
-                >
-                  ✏️
-                </td>
+        {filteredMessages.length === 0 ? (
+          <h3>
+            <em>No posts found 😢</em>
+          </h3>
+        ) : (
+          <table border={1} cellSpacing={0} cellPadding={6} width="100%">
+            <thead>
+              <tr>
+                <th>Sender</th>
+                <th>Role</th>
+                <th>Medium</th>
+                <th>Message</th>
+                <th>Sent</th>
+                <th>Edit</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </>
+            </thead>
+            <tbody>
+              {filteredMessages.map((message) => (
+                <tr key={message.id}>
+                  <td align="left">{message.sender?.name}</td>
+                  <td align="left">{message.roll}</td>
+                  <td align="left">{message.medium?.name}</td>
+                  <td align="left">{message.body}</td>
+                  <td align="right">{formatDate(message.timestamp)}</td>
+                  <td
+                    onMouseDown={(e) =>
+                      editMessage(e, message.id, message.senderID, message.body)
+                    }
+                  >
+                    ✏️
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
   )
 }
 
