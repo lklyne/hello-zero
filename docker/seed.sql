@@ -10,25 +10,21 @@ CREATE TABLE "user" (
   "partner" BOOLEAN NOT NULL
 );
 
-CREATE TABLE "medium" (
+CREATE TABLE "chat" (
   "id" VARCHAR PRIMARY KEY,
-  "name" VARCHAR NOT NULL
+  "userID" VARCHAR REFERENCES "user"(id),
+  "title" VARCHAR NOT NULL,
+  "systemPrompt" VARCHAR NOT NULL,
+  "temperature" NUMERIC NOT NULL,
+  "createdAt" TIMESTAMP NOT NULL
 );
 
 CREATE TABLE "message" (
   "id" VARCHAR PRIMARY KEY,
-  "senderID" VARCHAR REFERENCES "user"(id),
-  "mediumID" VARCHAR REFERENCES "medium"(id),
-  "body" VARCHAR NOT NULL,
-  "timestamp" TIMESTAMP not null,
-  "roll" VARCHAR NOT NULL
-);
-
-CREATE TABLE "chat" (
-  "id" VARCHAR PRIMARY KEY,
-  "userID" VARCHAR REFERENCES "user"(id),
-  "messageID" VARCHAR REFERENCES "message"(id),
-  "timestamp" TIMESTAMP not null
+  "chatID" VARCHAR REFERENCES "chat"(id),
+  "role" VARCHAR NOT NULL,
+  "content" VARCHAR NOT NULL,
+  "timestamp" TIMESTAMP NOT NULL
 );
 
 INSERT INTO "user" (id, name, partner) VALUES ('ycD76wW4R2', 'Aaron', true);
@@ -41,17 +37,12 @@ INSERT INTO "user" (id, name, partner) VALUES ('9ogaDuDNFx', 'Alex', true);
 INSERT INTO "user" (id, name, partner) VALUES ('6z7dkeVLNm', 'Dax', false);
 INSERT INTO "user" (id, name, partner) VALUES ('7VoEoJWEwn', 'Nate', false);
 
-INSERT INTO "medium" (id, name) VALUES ('G14bSFuNDq', 'Discord');
-INSERT INTO "medium" (id, name) VALUES ('b7rqt_8w_H', 'Twitter DM');
-INSERT INTO "medium" (id, name) VALUES ('0HzSMcee_H', 'Tweet reply to unrelated thread');
-INSERT INTO "medium" (id, name) VALUES ('ttx7NCmyac', 'SMS');
+-- INSERT INTO "chat" (id, userid, title, systemPrompt, temperature, createdAt) VALUES 
+-- ('chat1', 'ycD76wW4R2', 'First Chat', 'You are a helpful assistant', 0.7, '2024-03-15 10:00:00'),
+-- ('chat2', 'IoQSaxeVO5', 'Technical Discussion', 'You are a technical expert', 0.5, '2024-03-15 10:05:00');
 
-INSERT INTO "message" (id, senderID, mediumID, body, timestamp, roll) VALUES 
-('msg1', 'ycD76wW4R2', 'G14bSFuNDq', 'Hey, check this out!', '2024-03-15 10:00:00', '4'),
-('msg2', 'IoQSaxeVO5', 'ttx7NCmyac', 'Interesting project', '2024-03-15 10:05:00', '6'),
-('msg3', 'WndZWmGkO4', 'b7rqt_8w_H', 'When is the next meeting?', '2024-03-15 11:00:00', '3');
-
-INSERT INTO "chat" (id, userID, messageID, timestamp) VALUES 
-('chat1', 'ycD76wW4R2', 'msg1', '2024-03-15 10:00:00'),
-('chat2', 'IoQSaxeVO5', 'msg2', '2024-03-15 10:05:00'),
-('chat3', 'WndZWmGkO4', 'msg3', '2024-03-15 11:00:00');
+-- INSERT INTO "message" (id, chatid, role, content, timestamp) VALUES 
+-- ('msg1', 'chat1', 'user', 'Hello, can you help me with something?', '2024-03-15 10:00:00'),
+-- ('msg2', 'chat1', 'assistant', 'Of course! What can I help you with?', '2024-03-15 10:00:10'),
+-- ('msg3', 'chat2', 'user', 'How do I implement a binary search?', '2024-03-15 10:05:00'),
+-- ('msg4', 'chat2', 'assistant', 'Let me explain binary search step by step...', '2024-03-15 10:05:10');

@@ -9,10 +9,12 @@
     "dev:db-up": "docker compose --env-file .env -f ./docker/docker-compose.yml up",
     "dev:db-down": "docker compose --env-file .env -f ./docker/docker-compose.yml down",
     "dev:clean": "source .env && docker volume rm -f docker_zstart_pgdata && rm -rf \"${ZERO_REPLICA_FILE}\"*",
+    "dev:db-reset": "npm run dev:db-down && npm run dev:clean && npm run dev:db-up",
     "build": "tsc -b && vite build",
     "lint": "eslint ."
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.1.1",
     "@rocicorp/zero": "^0.10.2024122404",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

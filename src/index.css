@@ -17,7 +17,7 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
+/* 
 body {
   margin: 0;
   display: flex;
@@ -88,7 +88,7 @@ td:last-child {
   gap: 1rem;
   align-items: center;
   margin-bottom: 1rem;
-}
+} */
 
 @layer base {
   :root {

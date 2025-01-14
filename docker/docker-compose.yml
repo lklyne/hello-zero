@@ -26,6 +26,16 @@ services:
       - zstart_pgdata:/var/lib/postgresql/data
       - ./:/docker-entrypoint-initdb.d
 
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: 'admin@admin.com'
+      PGADMIN_DEFAULT_PASSWORD: 'admin'
+    ports:
+      - '5050:80'
+    depends_on:
+      - zstart_postgres
+
 volumes:
   zstart_pgdata:
     driver: local
