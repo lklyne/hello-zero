@@ -23,13 +23,19 @@ export default defineConfig({
     {
       name: 'api-server',
       configureServer(server) {
-        server.middlewares.use((req, res, next) => {
+        server.middlewares.use(async (req, res, next) => {
           if (!req.url?.startsWith('/api')) {
             return next()
           }
-          getRequestListener(async (request) => {
-            return await app.fetch(request, {})
-          })(req, res)
+          try {
+            await getRequestListener(async (request) => {
+              return await app.fetch(request, {})
+            })(req, res)
+          } catch (error) {
+            console.error('API middleware error:', error)
+            res.statusCode = 500
+            res.end(JSON.stringify({ error: 'Internal server error' }))
+          }
         })
       },
     },

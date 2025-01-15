@@ -36,7 +36,7 @@ const Experience = () => {
     z.mutate.chat.delete({ id })
   }
 
-  console.log(chats)
+  //   console.log(chats)
 
   return (
     <div className="w-full min-h-screen flex font-mono text-sm">

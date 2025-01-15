@@ -21,7 +21,7 @@ CREATE TABLE "chat" (
 
 CREATE TABLE "message" (
   "id" VARCHAR PRIMARY KEY,
-  "chatID" VARCHAR REFERENCES "chat"(id),
+  "chatID" VARCHAR REFERENCES "chat"(id) ON DELETE CASCADE,
   "role" VARCHAR NOT NULL,
   "content" VARCHAR NOT NULL,
   "timestamp" TIMESTAMP NOT NULL
