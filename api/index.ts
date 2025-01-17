@@ -96,6 +96,34 @@ app.post('/claude', async (c) => {
   }
 })
 
+app.post('/claude/title', async (c) => {
+  try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY is not defined')
+    }
+
+    const body = await c.req.json()
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    })
+
+    const response = await anthropic.messages.create({
+      model: 'claude-3-sonnet-20240229',
+      max_tokens: 100,
+      system:
+        'Generate a very brief title (2-4 words) for this conversation. Respond with only the title, no explanation or punctuation.',
+      messages: body.messages,
+      temperature: 0.7,
+      stream: false,
+    })
+
+    return c.text(response.content[0].text)
+  } catch (error) {
+    console.error('Claude API error:', error)
+    return c.json({ error: 'Failed to generate title' }, 500)
+  }
+})
+
 export default handle(app)
 
 function must<T>(val: T) {

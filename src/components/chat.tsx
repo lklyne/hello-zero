@@ -6,6 +6,10 @@ import { randID } from '../rand'
 import { useState, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { useChatScroll } from '../hooks/use-chat-scroll'
+import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
+import { ShortcutMap } from '../types/keyboard'
+import { PanelLeft, TrashIcon } from 'lucide-react'
+import { useUpdateChatTitle } from '../hooks/use-update-chat-title'
 
 interface Message {
   id: string
@@ -15,15 +19,34 @@ interface Message {
   timestamp: number
 }
 
-const Chat = ({ chatID }: { chatID: string }) => {
+const Chat = ({
+  chatID,
+  toggleSidebar,
+  onChatCreated,
+}: {
+  chatID?: string
+  toggleSidebar: () => void
+  onChatCreated: (newChatId: string) => void
+}) => {
   const z = useZero<Schema>()
   const [isLoading, setIsLoading] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement>()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const [messages] = useQuery(
-    z.query.message.where('chatID', '=', chatID).orderBy('timestamp', 'desc')
+    chatID
+      ? z.query.message
+          .where('chatID', '=', chatID)
+          .orderBy('timestamp', 'desc')
+      : z.query.message.where('chatID', '=', 'non-existent-id')
   )
+
+  const [chats] = useQuery(
+    chatID
+      ? z.query.chat.where('id', '=', chatID)
+      : z.query.chat.where('id', '=', 'non-existent-id')
+  )
+  const chat = chats?.[0]
 
   console.log(messages)
 
@@ -32,9 +55,12 @@ const Chat = ({ chatID }: { chatID: string }) => {
     isLoading,
   })
 
+  const { generateTitle } = useUpdateChatTitle()
+
   const upsertMessage = (
     messageID: string,
     content: string,
+    chatID: string,
     role: Message['role']
   ) => {
     z.mutate.message.upsert({
@@ -54,8 +80,22 @@ const Chat = ({ chatID }: { chatID: string }) => {
     if (!content?.trim() || isLoading) return
 
     setIsLoading(true)
+
+    const currentChatId = chatID ?? randID()
+    if (!chatID) {
+      z.mutate.chat.insert({
+        id: currentChatId,
+        userID: z.userID,
+        title: 'New Chat',
+        systemPrompt: 'You are a helpful assistant',
+        temperature: 0.7,
+        createdAt: Date.now(),
+      })
+      onChatCreated(currentChatId)
+    }
+
     const userMessageId = randID()
-    upsertMessage(userMessageId, content, 'user')
+    upsertMessage(userMessageId, content, currentChatId, 'user')
     ;(e.target as HTMLFormElement).reset()
     inputRef.current?.focus()
 
@@ -64,6 +104,11 @@ const Chat = ({ chatID }: { chatID: string }) => {
         .slice()
         .reverse()
         .map((msg) => ({ role: msg.role, content: msg.content }))
+
+      if (messages.length === 0) {
+        const newTitle = await generateTitle([{ role: 'user', content }])
+        z.mutate.chat.update({ id: currentChatId, title: newTitle })
+      }
 
       const response = await fetch('/api/claude', {
         method: 'POST',
@@ -88,7 +133,12 @@ const Chat = ({ chatID }: { chatID: string }) => {
 
         const text = new TextDecoder().decode(value)
         assistantMessage += text
-        upsertMessage(assistantMessageId, assistantMessage, 'assistant')
+        upsertMessage(
+          assistantMessageId,
+          assistantMessage,
+          currentChatId,
+          'assistant'
+        )
       }
     } catch (error) {
       console.error('Error calling Claude:', error)
@@ -97,37 +147,69 @@ const Chat = ({ chatID }: { chatID: string }) => {
     }
   }
 
+  const focusInput = () => {
+    inputRef.current?.focus()
+  }
+
+  const unfocusInput = () => {
+    inputRef.current?.blur()
+  }
+
+  const deleteChat = () => {
+    z.mutate.chat.delete({ id: chatID })
+  }
+
+  const shortcuts: ShortcutMap = {
+    focusInput: {
+      key: '/',
+      cmd: true,
+      description: 'Focus input',
+      action: focusInput,
+    },
+    unfocusInput: {
+      key: 'Escape',
+      description: 'Unfocus input',
+      action: unfocusInput,
+    },
+  }
+
+  useKeyboardShortcuts(shortcuts, true)
+
   return (
     <div className="flex flex-col h-full">
-      <div
-        ref={containerRef}
-        className="flex-1 overflow-y-auto pt-8 bg-red-200"
-      >
+      <nav className="flex justify-between items-center p-2 bg-primary-foreground border-b">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+            <PanelLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="text font-bold">{chat?.title ?? 'Untitled'}</h1>
+        </div>
+        <Button variant="ghost" size="icon" onClick={deleteChat}>
+          <TrashIcon className="w-5 h-5" />
+        </Button>
+      </nav>
+      <div ref={containerRef} className="flex-1 overflow-y-auto pt-8">
         <div className="max-w-2xl mx-auto">
-          {messages.length ? (
-            messages
-              .slice()
-              .reverse()
-              .map((message) => (
-                <div key={message.id} className="flex justify-end mb-2 gap-4">
-                  <div
-                    className={`max-w-prose px-2 py-2 flex flex-col gap-2 ${
-                      message.role === 'assistant'
-                        ? 'bg-gray-100 self-start w-full mr-8'
-                        : 'bg-white self-end opacity-80 ml-8'
-                    }`}
-                  >
-                    <ReactMarkdown>{message.content}</ReactMarkdown>
-                  </div>
+          {messages
+            .slice()
+            .reverse()
+            .map((message) => (
+              <div key={message.id} className="flex justify-end mb-2 gap-4">
+                <div
+                  className={`max-w-prose px-2 py-2 flex flex-col gap-2 ${
+                    message.role === 'assistant'
+                      ? 'bg-gray-100 self-start w-full mr-8'
+                      : 'bg-white self-end opacity-80 ml-8'
+                  }`}
+                >
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
                 </div>
-              ))
-          ) : (
-            <span className="px-4">Empty thread</span>
-          )}
+              </div>
+            ))}
           <div ref={bottomRef} className="h-px w-full" />
         </div>
       </div>
-      <div className="bottom-0 left-0 right-0 border-t px-4 py-4 bg-gray-100">
+      <div className="bottom-0 left-0 right-0 border-t px-4 py-4 bg-primary-foreground">
         <form
           className="flex gap-2 px-1.5 max-w-3xl w-full mx-auto"
           onSubmit={handleSubmit}
@@ -139,15 +221,16 @@ const Chat = ({ chatID }: { chatID: string }) => {
             placeholder={
               messages.length > 0 ? 'Reply...' : 'Start a new thread'
             }
-            className="flex-grow rounded-none border-primary"
+            className="flex-grow rounded-none"
             required
             disabled={isLoading}
             autoFocus
           />
           <Button
-            className="bg-primary text-white disabled:opacity-50 rounded-none"
+            className="rounded-none"
             type="submit"
             disabled={isLoading}
+            variant="outline"
           >
             {isLoading ? 'Sending...' : 'Send'}
           </Button>

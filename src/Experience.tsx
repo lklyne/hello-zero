@@ -5,15 +5,16 @@ import { Button } from '@/components/ui/button'
 import Cookies from 'js-cookie'
 import Chat from './components/chat'
 import { useState } from 'react'
+import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts'
+import { ShortcutMap } from './types/keyboard'
 
 const Experience = () => {
   const z = useZero<Schema>()
   const [chats] = useQuery(z.query.chat.where('userID', '=', z.userID))
   const [users] = useQuery(z.query.user)
-  const [selectedChatId, setSelectedChatId] = useState<string | null>(
-    chats[0]?.id ?? null
-  )
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
   const currentUser = users.find((user) => user.id === z.userID)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const toggleLogin = async () => {
     if (z.userID === 'anon') {
@@ -24,47 +25,97 @@ const Experience = () => {
     location.reload()
   }
 
-  const createChat = () => {
-    const newChatID = randID()
-    z.mutate.chat.insert({
-      id: newChatID,
-      userID: z.userID, // Use the logged-in user's ID
-      title: 'New Chat',
-      systemPrompt: 'You are a helpful assistant',
-      temperature: 0.7,
-      createdAt: Date.now(),
-    })
-    setSelectedChatId(newChatID)
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen)
   }
 
-  const deleteChat = (id: string) => {
-    z.mutate.chat.delete({ id })
+  const deleteChat = (id: string | null) => {
+    if (id) {
+      z.mutate.chat.delete({ id })
+    }
   }
+
+  const handleNext = () => {
+    const currentIndex = chats.findIndex((chat) => chat.id === selectedChatId)
+    const nextIndex = (currentIndex + 1) % chats.length
+    setSelectedChatId(chats[nextIndex]?.id ?? null)
+  }
+
+  const handlePrevious = () => {
+    const currentIndex = chats.findIndex((chat) => chat.id === selectedChatId)
+    const prevIndex = currentIndex <= 0 ? chats.length - 1 : currentIndex - 1
+    setSelectedChatId(chats[prevIndex]?.id ?? null)
+  }
+
+  const shortcuts: ShortcutMap = {
+    nextChat: {
+      key: 'k',
+      description: 'Next chat',
+      action: handleNext,
+    },
+    previousChat: {
+      key: 'j',
+      description: 'Previous chat',
+      action: handlePrevious,
+    },
+    toggleSidebar: {
+      key: 'b',
+      description: 'Toggle sidebar',
+      action: toggleSidebar,
+    },
+    deleteChat: {
+      key: 'Delete',
+      description: 'Delete chat',
+      action: () => deleteChat(selectedChatId),
+    },
+    createChat: {
+      key: 'n',
+      description: 'Create a new chat',
+      action: () => setSelectedChatId(null),
+    },
+  }
+
+  useKeyboardShortcuts(shortcuts)
 
   console.log(chats)
 
+  const handleChatCreated = (newChatId: string) => {
+    setSelectedChatId(newChatId)
+  }
+
   return (
     <div className="w-full min-h-screen flex font-mono text-sm">
-      <aside className="w-1/4 min-h-screen bg-gray-200 p-4">
+      <aside
+        className={`w-80 min-h-screen bg-gray-200 p-2 ${
+          sidebarOpen ? 'block' : 'hidden'
+        }`}
+      >
         <div className="flex flex-col h-full">
           <div className="flex-grow">
-            <div className="flex justify-between pb-4">
-              <h1>Chats {currentUser ? `(${currentUser.name})` : '(anon)'}</h1>
-              <button onClick={() => createChat()}>Add</button>
-            </div>
             <div className="flex flex-col gap-1">
+              <div
+                className={`flex justify-between p-2 cursor-pointer ${
+                  selectedChatId === null
+                    ? 'bg-yellow-300 text-black'
+                    : 'hover:bg-gray-100 bg-primary-foreground'
+                }`}
+                onClick={() => setSelectedChatId(null)}
+              >
+                <span className="font-bold uppercase tracking-widest">New</span>
+                <kbd className="px-1 bg-primary-100 rounded">n</kbd>
+              </div>
               {chats.map((chat) => (
                 <div
-                  className={`flex justify-between p-2 rounded cursor-pointer ${
+                  className={`flex justify-between p-2 border-b border-t border-transparent cursor-pointer ${
                     selectedChatId === chat.id
-                      ? 'bg-gray-300'
+                      ? 'border-b-primary border-t-primary'
                       : 'hover:bg-gray-100'
                   }`}
                   key={chat.id}
                   onClick={() => setSelectedChatId(chat.id)}
                 >
                   {chat.title}
-                  <Button
+                  {/* <Button
                     variant="ghost"
                     size="sm"
                     className="py-0 my-0 h-6"
@@ -74,7 +125,7 @@ const Experience = () => {
                     }}
                   >
                     Delete
-                  </Button>
+                  </Button> */}
                 </div>
               ))}
             </div>
@@ -88,8 +139,12 @@ const Experience = () => {
           </button>
         </div>
       </aside>
-      <main className="w-3/4 h-screen bg-gray-100">
-        {selectedChatId && <Chat chatID={selectedChatId} />}
+      <main className="w-full h-screen bg-gray-100">
+        <Chat
+          toggleSidebar={toggleSidebar}
+          chatID={selectedChatId ?? undefined}
+          onChatCreated={handleChatCreated}
+        />
       </main>
     </div>
   )
