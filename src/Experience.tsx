@@ -1,7 +1,7 @@
 import { useQuery, useZero } from '@rocicorp/zero/react'
 import { Schema } from './schema'
-import { randID } from './rand'
-import { Button } from '@/components/ui/button'
+// import { randID } from './rand'
+// import { Button } from '@/components/ui/button'
 import Cookies from 'js-cookie'
 import Chat from './components/chat'
 import { useState } from 'react'
@@ -11,9 +11,9 @@ import { ShortcutMap } from './types/keyboard'
 const Experience = () => {
   const z = useZero<Schema>()
   const [chats] = useQuery(z.query.chat.where('userID', '=', z.userID))
-  const [users] = useQuery(z.query.user)
+  // const [users] = useQuery(z.query.user)
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
-  const currentUser = users.find((user) => user.id === z.userID)
+  // const currentUser = users.find((user) => user.id === z.userID)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const toggleLogin = async () => {
@@ -86,30 +86,30 @@ const Experience = () => {
   return (
     <div className="w-full min-h-screen flex font-mono text-sm">
       <aside
-        className={`w-80 min-h-screen bg-gray-200 p-2 ${
+        className={`w-80 min-h-screen bg-gray-200 border border-primary ${
           sidebarOpen ? 'block' : 'hidden'
         }`}
       >
         <div className="flex flex-col h-full">
           <div className="flex-grow">
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col">
               <div
-                className={`flex justify-between p-2 cursor-pointer ${
+                className={`flex justify-between px-2 py-4 cursor-pointer border-b border-primary ${
                   selectedChatId === null
-                    ? 'bg-yellow-300 text-black'
-                    : 'hover:bg-gray-100 bg-primary-foreground'
+                    ? ' text-black border-primary bg-primary-foreground border-b'
+                    : 'hover:bg-gray-100 border-primary'
                 }`}
                 onClick={() => setSelectedChatId(null)}
               >
-                <span className="font-bold uppercase tracking-widest">New</span>
+                <span className="uppercase tracking-widest">New thread</span>
                 <kbd className="px-1 bg-primary-100 rounded">n</kbd>
               </div>
               {chats.map((chat) => (
                 <div
-                  className={`flex justify-between p-2 border-b border-t border-transparent cursor-pointer ${
+                  className={`flex justify-between p-2 border-b border-t -mt-[1px] border-transparent cursor-pointer ${
                     selectedChatId === chat.id
-                      ? 'border-b-primary border-t-primary'
-                      : 'hover:bg-gray-100'
+                      ? 'border-b-primary border-t-primary bg-white'
+                      : 'hover:bg-gray-100 hover:border-primary'
                   }`}
                   key={chat.id}
                   onClick={() => setSelectedChatId(chat.id)}

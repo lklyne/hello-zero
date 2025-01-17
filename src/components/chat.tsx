@@ -10,6 +10,7 @@ import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
 import { ShortcutMap } from '../types/keyboard'
 import { PanelLeft, TrashIcon } from 'lucide-react'
 import { useUpdateChatTitle } from '../hooks/use-update-chat-title'
+import { ChatSettings } from './chat-settings'
 
 interface Message {
   id: string
@@ -155,10 +156,6 @@ const Chat = ({
     inputRef.current?.blur()
   }
 
-  const deleteChat = () => {
-    z.mutate.chat.delete({ id: chatID })
-  }
-
   const shortcuts: ShortcutMap = {
     focusInput: {
       key: '/',
@@ -177,26 +174,24 @@ const Chat = ({
 
   return (
     <div className="flex flex-col h-full">
-      <nav className="flex justify-between items-center p-2 bg-primary-foreground border-b">
+      <nav className="flex border-t border-b border-r border-primary justify-between items-center p-2 bg-primary-foreground">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={toggleSidebar}>
             <PanelLeft className="w-5 h-5" />
           </Button>
           <h1 className="text font-bold">{chat?.title ?? 'Untitled'}</h1>
         </div>
-        <Button variant="ghost" size="icon" onClick={deleteChat}>
-          <TrashIcon className="w-5 h-5" />
-        </Button>
+        <ChatSettings chatID={chatID} />
       </nav>
       <div ref={containerRef} className="flex-1 overflow-y-auto pt-8">
-        <div className="max-w-2xl mx-auto">
+        <div className="mx-auto px-12">
           {messages
             .slice()
             .reverse()
             .map((message) => (
               <div key={message.id} className="flex justify-end mb-2 gap-4">
                 <div
-                  className={`max-w-prose px-2 py-2 flex flex-col gap-2 ${
+                  className={`px-2 py-2 flex flex-col gap-2 ${
                     message.role === 'assistant'
                       ? 'bg-gray-100 self-start w-full mr-8'
                       : 'bg-white self-end opacity-80 ml-8'
@@ -209,9 +204,9 @@ const Chat = ({
           <div ref={bottomRef} className="h-px w-full" />
         </div>
       </div>
-      <div className="bottom-0 left-0 right-0 border-t px-4 py-4 bg-primary-foreground">
+      <div className="bottom-0 left-0 right-0 border px-2 py-2 bg-primary-foreground border-t-primary">
         <form
-          className="flex gap-2 px-1.5 max-w-3xl w-full mx-auto"
+          className="flex gap-2 px-1 w-full mx-auto"
           onSubmit={handleSubmit}
         >
           <Input
@@ -221,7 +216,7 @@ const Chat = ({
             placeholder={
               messages.length > 0 ? 'Reply...' : 'Start a new thread'
             }
-            className="flex-grow rounded-none"
+            className="flex-grow rounded-none text-sm"
             required
             disabled={isLoading}
             autoFocus
@@ -232,7 +227,7 @@ const Chat = ({
             disabled={isLoading}
             variant="outline"
           >
-            {isLoading ? 'Sending...' : 'Send'}
+            {isLoading ? 'Send' : 'Send'}
           </Button>
         </form>
       </div>
