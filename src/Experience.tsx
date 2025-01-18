@@ -1,20 +1,31 @@
 import { useQuery, useZero } from '@rocicorp/zero/react'
 import { Schema } from './schema'
-// import { randID } from './rand'
-// import { Button } from '@/components/ui/button'
 import Cookies from 'js-cookie'
 import Chat from './components/chat'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts'
 import { ShortcutMap } from './types/keyboard'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from './components/ui/resizable'
+import type { ImperativePanelHandle } from 'react-resizable-panels'
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from './components/ui/popover'
+import { Button } from './components/ui/button'
+import { ArrowBigUpDash } from 'lucide-react'
 
 const Experience = () => {
   const z = useZero<Schema>()
   const [chats] = useQuery(z.query.chat.where('userID', '=', z.userID))
-  // const [users] = useQuery(z.query.user)
+  const [users] = useQuery(z.query.user)
+  const currentUser = users.find((user) => user.id === z.userID)
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
-  // const currentUser = users.find((user) => user.id === z.userID)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const sidebarPanelRef = useRef<ImperativePanelHandle>(null)
 
   const toggleLogin = async () => {
     if (z.userID === 'anon') {
@@ -26,7 +37,11 @@ const Experience = () => {
   }
 
   const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen)
+    if (sidebarPanelRef.current?.isCollapsed()) {
+      sidebarPanelRef.current?.expand()
+    } else {
+      sidebarPanelRef.current?.collapse()
+    }
   }
 
   const deleteChat = (id: string | null) => {
@@ -85,67 +100,86 @@ const Experience = () => {
 
   return (
     <div className="w-full min-h-screen flex font-mono text-sm">
-      <aside
-        className={`w-80 min-h-screen bg-gray-200 border border-primary ${
-          sidebarOpen ? 'block' : 'hidden'
-        }`}
-      >
-        <div className="flex flex-col h-full">
-          <div className="flex-grow">
-            <div className="flex flex-col">
-              <div
-                className={`flex justify-between px-2 py-4 cursor-pointer border-b border-primary ${
-                  selectedChatId === null
-                    ? ' text-black border-primary bg-primary-foreground border-b'
-                    : 'hover:bg-gray-100 border-primary'
-                }`}
-                onClick={() => setSelectedChatId(null)}
-              >
-                <span className="uppercase tracking-widest">New thread</span>
-                <kbd className="px-1 bg-primary-100 rounded">n</kbd>
-              </div>
-              {chats.map((chat) => (
-                <div
-                  className={`flex justify-between p-2 border-b border-t -mt-[1px] border-transparent cursor-pointer ${
-                    selectedChatId === chat.id
-                      ? 'border-b-primary border-t-primary bg-white'
-                      : 'hover:bg-gray-100 hover:border-primary'
-                  }`}
-                  key={chat.id}
-                  onClick={() => setSelectedChatId(chat.id)}
-                >
-                  {chat.title}
-                  {/* <Button
-                    variant="ghost"
-                    size="sm"
-                    className="py-0 my-0 h-6"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      deleteChat(chat.id)
-                    }}
-                  >
-                    Delete
-                  </Button> */}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <button
-            onClick={toggleLogin}
-            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-300"
+      <ResizablePanelGroup direction="horizontal">
+        <ResizablePanel
+          ref={sidebarPanelRef}
+          defaultSize={24}
+          collapsible
+          minSize={20}
+          maxSize={40}
+        >
+          <aside
+            className={`min-h-screen bg-gray-200 border border-primary flex flex-col`}
           >
-            {z.userID === 'anon' ? 'Login' : 'Logout'}
-          </button>
-        </div>
-      </aside>
-      <main className="w-full h-screen bg-gray-100">
-        <Chat
-          toggleSidebar={toggleSidebar}
-          chatID={selectedChatId ?? undefined}
-          onChatCreated={handleChatCreated}
-        />
-      </main>
+            <div className="flex flex-col flex-grow">
+              <div className="flex-grow">
+                <div className="flex flex-col">
+                  <div
+                    className={`flex justify-between px-2 py-4 cursor-pointer border-b border-primary ${
+                      selectedChatId === null
+                        ? ' text-black border-primary bg-primary-foreground border-b'
+                        : 'hover:bg-gray-100 border-primary'
+                    }`}
+                    onClick={() => setSelectedChatId(null)}
+                  >
+                    <span className="uppercase tracking-widest">
+                      New thread
+                    </span>
+                    <kbd className="px-1 bg-primary-100 rounded">n</kbd>
+                  </div>
+                  {chats.map((chat) => (
+                    <div
+                      className={`flex justify-between p-2 border-b border-t -mt-[1px] border-transparent cursor-pointer ${
+                        selectedChatId === chat.id
+                          ? 'border-b-primary border-t-primary bg-white'
+                          : 'hover:bg-gray-100 hover:border-primary'
+                      }`}
+                      key={chat.id}
+                      onClick={() => setSelectedChatId(chat.id)}
+                    >
+                      {chat.title}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex py-1 px-2 border-t border-primary gap-2">
+              <div className="flex w-full gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="secondary"
+                      className="flex items-center w-full my-1 rounded-none border-primary"
+                    >
+                      {currentUser?.name}
+                      <ArrowBigUpDash className="w-5 h-5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 mr-2">
+                    <Button
+                      variant="secondary"
+                      className="w-full mt-8"
+                      onClick={toggleLogin}
+                    >
+                      Logout
+                    </Button>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </aside>
+        </ResizablePanel>
+        <ResizableHandle className="w-0" />
+        <ResizablePanel defaultSize={76}>
+          <main className="w-full h-screen bg-gray-100">
+            <Chat
+              toggleSidebar={toggleSidebar}
+              chatID={selectedChatId ?? undefined}
+              onChatCreated={handleChatCreated}
+            />
+          </main>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   )
 }

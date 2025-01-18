@@ -1,182 +1,72 @@
-import * as React from "react"
+import * as React from 'react'
+import { Sidebar, SidebarContent } from '@/components/ui/sidebar'
 
-import { SearchForm } from "@/components/search-form"
-import { VersionSwitcher } from "@/components/version-switcher"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarRail,
-} from "@/components/ui/sidebar"
-
-// This is sample data.
-const data = {
-  versions: ["1.0.1", "1.1.0-alpha", "2.0.0-beta1"],
-  navMain: [
-    {
-      title: "Getting Started",
-      url: "#",
-      items: [
-        {
-          title: "Installation",
-          url: "#",
-        },
-        {
-          title: "Project Structure",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Building Your Application",
-      url: "#",
-      items: [
-        {
-          title: "Routing",
-          url: "#",
-        },
-        {
-          title: "Data Fetching",
-          url: "#",
-          isActive: true,
-        },
-        {
-          title: "Rendering",
-          url: "#",
-        },
-        {
-          title: "Caching",
-          url: "#",
-        },
-        {
-          title: "Styling",
-          url: "#",
-        },
-        {
-          title: "Optimizing",
-          url: "#",
-        },
-        {
-          title: "Configuring",
-          url: "#",
-        },
-        {
-          title: "Testing",
-          url: "#",
-        },
-        {
-          title: "Authentication",
-          url: "#",
-        },
-        {
-          title: "Deploying",
-          url: "#",
-        },
-        {
-          title: "Upgrading",
-          url: "#",
-        },
-        {
-          title: "Examples",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "API Reference",
-      url: "#",
-      items: [
-        {
-          title: "Components",
-          url: "#",
-        },
-        {
-          title: "File Conventions",
-          url: "#",
-        },
-        {
-          title: "Functions",
-          url: "#",
-        },
-        {
-          title: "next.config.js Options",
-          url: "#",
-        },
-        {
-          title: "CLI",
-          url: "#",
-        },
-        {
-          title: "Edge Runtime",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Architecture",
-      url: "#",
-      items: [
-        {
-          title: "Accessibility",
-          url: "#",
-        },
-        {
-          title: "Fast Refresh",
-          url: "#",
-        },
-        {
-          title: "Next.js Compiler",
-          url: "#",
-        },
-        {
-          title: "Supported Browsers",
-          url: "#",
-        },
-        {
-          title: "Turbopack",
-          url: "#",
-        },
-      ],
-    },
-  ],
+interface Chat {
+  id: string
+  title: string
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  chats: Chat[]
+  selectedChatId: string | null
+  onChatSelect: (id: string | null) => void
+  onLogout: () => void
+  userId: string
+}
+
+export const AppSidebar = ({
+  chats,
+  selectedChatId,
+  onChatSelect,
+  onLogout,
+  userId,
+  ...props
+}: AppSidebarProps) => {
   return (
-    <Sidebar {...props}>
-      <SidebarHeader>
-        <VersionSwitcher
-          versions={data.versions}
-          defaultVersion={data.versions[0]}
-        />
-        <SearchForm />
-      </SidebarHeader>
+    <Sidebar
+      className="min-h-screen bg-gray-200 border border-primary"
+      {...props}
+    >
       <SidebarContent>
-        {/* We create a SidebarGroup for each parent. */}
-        {data.navMain.map((item) => (
-          <SidebarGroup key={item.title}>
-            <SidebarGroupLabel>{item.title}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {item.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={item.isActive}>
-                      <a href={item.url}>{item.title}</a>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        <div className="flex flex-col h-full">
+          <div className="flex-grow">
+            <div className="flex flex-col">
+              <div
+                className={`flex justify-between px-2 py-4 cursor-pointer border-b border-primary ${
+                  selectedChatId === null
+                    ? 'text-black border-primary bg-primary-foreground border-b'
+                    : 'hover:bg-gray-100 border-primary'
+                }`}
+                onClick={() => onChatSelect(null)}
+              >
+                <span className="uppercase tracking-widest">New thread</span>
+                <kbd className="px-1 bg-primary-100 rounded">n</kbd>
+              </div>
+
+              {chats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`flex justify-between p-2 border-b border-t -mt-[1px] border-transparent cursor-pointer ${
+                    selectedChatId === chat.id
+                      ? 'border-b-primary border-t-primary bg-white'
+                      : 'hover:bg-gray-100 hover:border-primary'
+                  }`}
+                  onClick={() => onChatSelect(chat.id)}
+                >
+                  {chat.title}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={onLogout}
+            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-300"
+          >
+            {userId === 'anon' ? 'Login' : 'Logout'}
+          </button>
+        </div>
       </SidebarContent>
-      <SidebarRail />
     </Sidebar>
   )
 }

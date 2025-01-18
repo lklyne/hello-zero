@@ -9,6 +9,8 @@ import {
 import { Schema } from '@/schema'
 import { useZero } from '@rocicorp/zero/react'
 import { Ellipsis, TrashIcon } from 'lucide-react'
+import { Textarea } from './ui/textarea'
+import { Slider } from '@/components/ui/slider'
 
 export function ChatSettings({ chatID }: { chatID: string }) {
   const z = useZero<Schema>()
@@ -27,48 +29,45 @@ export function ChatSettings({ chatID }: { chatID: string }) {
       <PopoverContent className="w-80 mr-2">
         <div className="grid gap-4">
           <div className="space-y-2">
-            <h4 className="font-medium leading-none">Dimensions</h4>
+            <h4 className="font-medium leading-none">Settings</h4>
             <p className="text-sm text-muted-foreground">
               Set the dimensions for the layer.
             </p>
           </div>
-          <div className="grid gap-2">
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="width">Width</Label>
-              <Input
-                id="width"
-                defaultValue="100%"
-                className="col-span-2 h-8"
-              />
+          <div className="grid gap-4">
+            <div className="grid grid-cols-1 items-center gap-4">
+              <Label htmlFor="width">Name</Label>
+              <Input id="name" defaultValue="" className="col-span-2 h-8" />
             </div>
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="maxWidth">Max. width</Label>
-              <Input
-                id="maxWidth"
-                defaultValue="300px"
-                className="col-span-2 h-8"
-              />
+            <div className="grid grid-cols-1 items-center gap-4">
+              <Label htmlFor="width">System Prompt</Label>
+              <Textarea id="width" defaultValue="" className="col-span-2 h-8" />
             </div>
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="height">Height</Label>
-              <Input
-                id="height"
-                defaultValue="25px"
-                className="col-span-2 h-8"
-              />
-            </div>
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="maxHeight">Max. height</Label>
-              <Input
-                id="maxHeight"
-                defaultValue="none"
-                className="col-span-2 h-8"
-              />
+            <div className="grid grid-cols-1 items-center gap-4">
+              <Label htmlFor="maxWidth">Temperature</Label>
+              <div className="flex items-center gap-2">
+                <Slider
+                  defaultValue={[0.7]}
+                  max={1}
+                  step={0.01}
+                  className="w-3/4"
+                />
+                <Input
+                  id="temperature"
+                  defaultValue="0.7"
+                  className="w-1/4 h-8"
+                />
+              </div>
             </div>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={deleteChat}>
+        <Button
+          variant="secondary"
+          className="w-full mt-8"
+          onClick={deleteChat}
+        >
           <TrashIcon className="w-5 h-5" />
+          <span>Delete</span>
         </Button>
       </PopoverContent>
     </Popover>
