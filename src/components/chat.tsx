@@ -11,6 +11,7 @@ import { ShortcutMap } from '../types/keyboard'
 import { PanelLeft, TrashIcon } from 'lucide-react'
 import { useUpdateChatTitle } from '../hooks/use-update-chat-title'
 import { ChatSettings } from './chat-settings'
+import Visualizer from './visualizer'
 
 interface Message {
   id: string
@@ -203,6 +204,7 @@ const Chat = ({
             ))}
           <div ref={bottomRef} className="h-px w-full" />
         </div>
+        <Visualizer />
       </div>
       <div className="bottom-0 left-0 right-0 border px-2 py-2 bg-primary-foreground border-t-primary">
         <form
