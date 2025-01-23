@@ -1,5 +1,5 @@
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useRef } from 'react'
+import { useEffect, useRef, useState, ComponentProps } from 'react'
 import {
   Environment,
   MeshTransmissionMaterial,
@@ -7,28 +7,41 @@ import {
   PerspectiveCamera,
   RoundedBox,
 } from '@react-three/drei'
+import { useSpring, animated } from '@react-spring/three'
+import { Mesh, Vector3 } from 'three'
 
 import { useControls, Leva } from 'leva'
 
-const Visualizer = () => {
+type VisualizerStatus =
+  | { type: 'waiting' }
+  | { type: 'thinking'; words: number }
+
+type MeshTransmissionMaterialProps = ComponentProps<
+  typeof MeshTransmissionMaterial
+>
+
+const Visualizer = ({ status = 'waiting' }: { status: VisualizerStatus }) => {
   const config = useControls({
-    radius: { value: 0.2, min: 0, max: 0.5, step: 0.01 },
-    roughness: { value: 0.1, min: 0, max: 1, step: 0.01 },
-    thickness: { value: 2.75, min: 0, max: 10, step: 0.01 },
-    ior: { value: 1.25, min: 0, max: 10, step: 0.01 },
+    radius: { value: 0.38, min: 0, max: 0.5, step: 0.01 },
+    roughness: { value: 0.28, min: 0, max: 1, step: 0.01 },
+    thickness: { value: 1.58, min: 0, max: 10, step: 0.01 },
+    chromaticAberration: { value: 0.4, min: 0, max: 1, step: 0.01 },
+    ior: { value: 7.84, min: 0, max: 10, step: 0.01 },
+    background: { value: '#ffffff' },
+    transmissionSampler: { value: true },
   })
 
   return (
-    <div>
-      <Canvas className="absolute inset-0">
+    <div className="w-full h-full">
+      <Canvas className="absolute">
         {/* <color attach="background" args={['#ffffff']} /> */}
-        <Box {...config} />
-        <mesh>
+        <Box status={status} {...config} />
+        {/* <mesh>
           <sphereGeometry args={[1, 32, 32]} />
           <meshStandardMaterial color="red" />
-        </mesh>
+        </mesh> */}
         <ambientLight intensity={4} />
-        <PerspectiveCamera makeDefault position={[0, 0, 5]} />
+        <PerspectiveCamera makeDefault position={[0, 0, 8]} />
         <Environment
           files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/qwantani_puresky_1k.hdr"
           backgroundIntensity={2}
@@ -37,61 +50,109 @@ const Visualizer = () => {
         />{' '}
         <OrbitControls />
       </Canvas>
-      <Leva hidden />
+      <Leva />
     </div>
   )
 }
 
 export default Visualizer
 
+const COLOR_PAIRS = [
+  [
+    [2, 0.2, 1],
+    [0.1, 1.5, 2],
+  ], // Purple to Cyan
+  [
+    [2, 0.5, 0],
+    [0, 2, 0.5],
+  ], // Orange to Green
+  [
+    [1.8, 0.1, 0.5],
+    [0.1, 0.8, 2],
+  ], // Hot Pink to Blue
+  [
+    [2, 1.5, 0],
+    [1, 0.1, 1.5],
+  ], // Yellow to Magenta
+  [
+    [0.5, 2, 1],
+    [2, 0.3, 0.3],
+  ], // Turquoise to Red
+  [
+    [1.5, 0.5, 2],
+    [2, 1.8, 0.1],
+  ], // Purple to Gold
+] as const
+
 const Box = ({
   radius,
+  status,
   ...config
-}: { radius: number } & MeshTransmissionMaterialProps) => {
+}: {
+  radius: number
+  status: VisualizerStatus
+} & MeshTransmissionMaterialProps) => {
   const boxRef = useRef<Mesh>(null)
-  const lerpRef = useRef({
-    radius: radius,
-    compensation: 2 + radius * 1.5,
-  })
+  const compensation = 2 + radius * 1.5
+  const [colorIndex, setColorIndex] = useState(0)
 
-  const LERP_FACTOR = 0.1
+  // Get words count safely
+  const wordsCount = status.type === 'thinking' ? status.words : 0
 
-  useFrame((state, delta) => {
-    if (boxRef.current) {
-      // Lerp the radius
-      lerpRef.current.radius += (radius - lerpRef.current.radius) * LERP_FACTOR
-
-      // Lerp the compensation factor
-      const targetCompensation = 2 + radius * 1.5
-      lerpRef.current.compensation +=
-        (targetCompensation - lerpRef.current.compensation) * LERP_FACTOR
-
-      boxRef.current.rotation.x += delta * 1.2
-      boxRef.current.rotation.y += delta * 4
+  // Update color only when switching from waiting to thinking
+  useEffect(() => {
+    if (status.type === 'thinking') {
+      setColorIndex((prev) => (prev + 1) % COLOR_PAIRS.length)
     }
+  }, [status.type]) // Only depend on status.type, not words
+
+  // Create dynamic rotations based on word count
+  const { rotationX, rotationY, rotationZ, scale } = useSpring({
+    rotationX:
+      status.type === 'thinking' ? Math.sin(wordsCount * 0.1) * Math.PI : 0,
+    rotationY:
+      status.type === 'thinking' ? Math.cos(wordsCount * 0.1) * Math.PI : 0,
+    rotationZ:
+      status.type === 'thinking' ? Math.sin(wordsCount * 0.05) * Math.PI : 0,
+    scale:
+      status.type === 'thinking' ? 1 + Math.sin(wordsCount * 0.1) * 0.1 : 1,
+    config: {
+      mass: 2,
+      tension: 200,
+      friction: 30,
+    },
   })
+
+  const sphereColor =
+    status.type === 'waiting' ? 'black' : COLOR_PAIRS[colorIndex][0]
+
+  const attenuationColor =
+    status.type === 'waiting' ? 'white' : COLOR_PAIRS[colorIndex][1]
 
   return (
-    <RoundedBox
-      ref={boxRef}
-      scale={lerpRef.current.compensation}
-      position={[0, 0, 0]}
-      radius={lerpRef.current.radius}
-      smoothness={64}
-    >
-      <MeshTransmissionMaterial
-        transmission={1}
-        {...config}
-        samples={24}
-        anisotropy={0.1}
-        chromaticAberration={1}
-        distortionScale={0.1}
-        distortion={0.1}
-        backside={true}
-        attenuationDistance={1}
-        attenuationColor={'#ffffff'}
-        color={'#ffffff'}
-      />
-    </RoundedBox>
+    <>
+      <mesh>
+        <sphereGeometry args={[1, 32, 32]} />
+        <meshStandardMaterial color={sphereColor} />
+      </mesh>
+      <animated.group
+        rotation-x={rotationX}
+        rotation-y={rotationY}
+        rotation-z={rotationZ}
+      >
+        <animated.mesh ref={boxRef} scale={scale.to((s) => s * compensation)}>
+          <RoundedBox radius={radius} smoothness={128}>
+            <MeshTransmissionMaterial
+              {...config}
+              backsideThickness={0.5}
+              distortion={0.1}
+              backside={true}
+              color={attenuationColor}
+              attenuationColor={attenuationColor}
+            />
+          </RoundedBox>
+        </animated.mesh>
+      </animated.group>
+    </>
   )
 }

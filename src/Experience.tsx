@@ -92,8 +92,6 @@ const Experience = () => {
 
   useKeyboardShortcuts(shortcuts)
 
-  console.log(chats)
-
   const handleChatCreated = (newChatId: string) => {
     setSelectedChatId(newChatId)
   }

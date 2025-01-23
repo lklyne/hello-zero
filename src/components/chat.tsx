@@ -3,15 +3,15 @@ import { Schema } from '../schema'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { randID } from '../rand'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { useChatScroll } from '../hooks/use-chat-scroll'
 import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
 import { ShortcutMap } from '../types/keyboard'
-import { PanelLeft, TrashIcon } from 'lucide-react'
+import { PanelLeft, TrshIcon } from 'lucide-react'
 import { useUpdateChatTitle } from '../hooks/use-update-chat-title'
 import { ChatSettings } from './chat-settings'
-import Visualizer from './visualizer'
+import ConsciousnessVisualizer from './ConsioussnessVisualizer'
 
 interface Message {
   id: string
@@ -50,7 +50,7 @@ const Chat = ({
   )
   const chat = chats?.[0]
 
-  console.log(messages)
+  // console.log(messages)
 
   const { bottomRef } = useChatScroll({
     containerRef,
@@ -128,6 +128,7 @@ const Chat = ({
       const reader = response.body.getReader()
       const assistantMessageId = randID()
       let assistantMessage = ''
+      let wordCount = 0
 
       while (true) {
         const { done, value } = await reader.read()
@@ -135,6 +136,11 @@ const Chat = ({
 
         const text = new TextDecoder().decode(value)
         assistantMessage += text
+
+        // Count words in new chunk of text
+        const newWords = text.trim().split(/\s+/).length
+        wordCount += newWords
+
         upsertMessage(
           assistantMessageId,
           assistantMessage,
@@ -173,6 +179,41 @@ const Chat = ({
 
   useKeyboardShortcuts(shortcuts, true)
 
+  const calculateSentiment = (text: string): number => {
+    // Simple sentiment detection - can be enhanced with a proper sentiment analysis library
+    const positiveWords = [
+      'great',
+      'good',
+      'excellent',
+      '!',
+      '😊',
+      '👍',
+      'happy',
+      'thanks',
+    ]
+    const negativeWords = [
+      'error',
+      'wrong',
+      'bad',
+      'sorry',
+      'fail',
+      '😞',
+      '👎',
+      'sad',
+    ]
+
+    const lowerText = text.toLowerCase()
+    const positiveCount = positiveWords.filter((word) =>
+      lowerText.includes(word)
+    ).length
+    const negativeCount = negativeWords.filter((word) =>
+      lowerText.includes(word)
+    ).length
+
+    if (positiveCount === 0 && negativeCount === 0) return 0.5
+    return positiveCount / (positiveCount + negativeCount) || 0.5
+  }
+
   return (
     <div className="flex flex-col h-full">
       <nav className="flex border-t border-b border-r border-primary justify-between items-center p-2 bg-primary-foreground">
@@ -202,9 +243,15 @@ const Chat = ({
                 </div>
               </div>
             ))}
+          <div
+            className={`relative ${
+              messages.length === 0 ? 'h-96 w-full' : 'h-96 w-full'
+            }`}
+          >
+            <ConsciousnessVisualizer chatID={chatID} isProcessing={isLoading} />
+          </div>
           <div ref={bottomRef} className="h-px w-full" />
         </div>
-        <Visualizer />
       </div>
       <div className="bottom-0 left-0 right-0 border px-2 py-2 bg-primary-foreground border-t-primary">
         <form
